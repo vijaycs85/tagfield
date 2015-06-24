@@ -1,0 +1,189 @@
+<?php
+
+/**
+ * @file
+ * Contains tagfield implementation.
+ */
+
+/**
+ * Implements hook_elements().
+ */
+function tagfield_elements() {
+  $element = array(
+    '#input' => TRUE,
+    '#process' => array('tagfield_element_process'),
+    '#submit_label' => t('Add'),
+    '#default' => array(),
+    '#submit' => array(),
+    '#validate' => array(),
+    '#value_callback' => 'tagfield_element_value',
+    '#element_validate' => array('tagfield_element_validate'),
+  );
+  return array('tagfield' => $element);
+}
+
+/**
+ * Implementation of hook_theme().
+ */
+function tagfield_theme() {
+  return array(
+    'tagfield' => array(
+      'arguments' => array('element' => NULL),
+    ),
+    'tagfield_list' => array(
+      'arguments' => array(
+        'items' => array(),
+        'title' => NULL,
+        'type' => NULL,
+        'attributes' => array(),
+      ),
+    ),
+  );
+}
+
+/**
+ * The #value_callback for the tagfield type element.
+ */
+function tagfield_element_value($element, $edit = FALSE) {
+  // print_r($element);
+  //exit;
+}
+
+function tagfield_element_validate($element, &$form_state) {
+  if (!empty($form_state['clicked_button']['#array_parents']) && array_pop($form_state['clicked_button']['#parents']) != 'tagfield_submit') {
+    // form_set_value($element, $form_state['values']['tag_list'], $form_state);
+    // unset($form_state['values']['tag_list']);
+  }
+}
+
+function tagfield_element_process($element, $edit, &$form_state, $complete_form) {
+  $field_name = $element['#name'];
+  if (!isset($form_state['values'][$field_name]['tag_list'])) {
+    $form_state['values'][$field_name]['tag_list'] = array();
+    if (isset($element['#default']) ) {
+      $form_state['values'][$field_name]['tag_list'] = $element['#default'];
+    }
+  }
+  if (isset($form_state['storage'][$field_name]['tag_list'])) {
+    $form_state['values'][$field_name]['tag_list'] = array_merge($form_state['values'][$field_name]['tag_list'], $form_state['storage'][$field_name]['tag_list']);
+  }
+  $list = $form_state['values'][$field_name]['tag_list'];
+  $element['tagfield_text'] = array(
+    '#type' => 'textfield',
+    '#title' => '',
+    '#description' => '',
+    '#default' => '',
+    '#size' => 30,
+    '#weight' => 1,
+    '#attributes' => array('class' => 'tagfield-input'),
+    '#field_name' => $field_name,
+  );
+  $element['tagfield_submit'] = array(
+    '#type' => 'submit',
+    '#value' => $element['#submit_label'] . ' ' . $field_name,
+    '#weight' => 2,
+    '#validate' => $element['#validate'],
+    '#submit' => $element['#submit'] + array('tagfield_add_submit'),
+    '#field_name' => $field_name,
+  );
+  $element['tagfield_list'] = array(
+    '#type' => 'markup',
+    '#value' => theme('tagfield_list', $list),
+    '#weight' => 3,
+    '#field_name' => $field_name,
+  );
+  $element['#tree'] = TRUE;
+//  foreach ($list as $index => $item) {
+//    $element['tagfield_tags'][$index] = array(
+//      '#type' => 'value',
+//      '#value' => $item
+//    );
+//  }
+
+  return $element;
+}
+
+/**
+ * Theme function for a tagfield element.
+ *
+ * Render it in a fieldset if a description.
+ */
+function theme_tagfield($element) {
+  if (!empty($element['#description']) && isset($element['tagfield_widgets'])) {
+    $fieldset = array(
+      '#type' => 'fieldset',
+      '#title' => $element['#title'],
+      '#description' => $element['#description'],
+      '#children' => $element['#children'],
+      '#attributes' => array('class' => 'tagfield'),
+    );
+    return theme('fieldset', $fieldset);
+  }
+  else {
+    return '<div class="tagfield">'. $element['#children'] .'</div>';
+  }
+}
+
+function theme_tagfield_list($items = array(), $title = NULL, $type = 'ul', $attributes = NULL) {
+  drupal_add_css(drupal_get_path('module', 'tagfield') . '/tagfield.css');
+  $output = '<div class="tagfield-list item-list">';
+  if (isset($title)) {
+    $output .= '<h3>'. $title .'</h3>';
+  }
+
+  if (!empty($items)) {
+    $output .= "<$type". drupal_attributes($attributes) .'>';
+    $num_items = count($items);
+    foreach ($items as $i => $item) {
+      $attributes = array();
+      $children = array();
+      if (is_array($item)) {
+        foreach ($item as $key => $value) {
+          if ($key == 'data') {
+            $data = $value;
+          }
+          elseif ($key == 'children') {
+            $children = $value;
+          }
+          else {
+            $attributes[$key] = $value;
+          }
+        }
+      }
+      else {
+        $data = $item;
+      }
+      if (count($children) > 0) {
+        $data .= theme_tagfield_list($children, NULL, $type, $attributes);
+      }
+      if ($i == 0) {
+        $attributes['class'] = empty($attributes['class']) ? 'first' : ($attributes['class'] .' first');
+      }
+      if ($i == $num_items - 1) {
+        $attributes['class'] = empty($attributes['class']) ? 'last' : ($attributes['class'] .' last');
+      }
+      $delete_link = '<span class="tagfield-close"><span class="tagfield-icon tagfield-icon-close" title="Delete">Delete</span></span>';
+      $output .= '<li'. drupal_attributes($attributes) .'>'. $data . $delete_link . "</li>\n";
+    }
+    $output .= "</$type>";
+  }
+  $output .= '</div>';
+  return $output;
+}
+
+function tagfield_add_submit($form, &$form_state) {
+  if (isset($form_state['clicked_button']['#field_name'])) {
+    // _form_button_was_clicked
+    $form_state['rebuild'] = TRUE;
+    $field = $form_state['clicked_button']['#field_name'];
+    $values = $form_state['values'][$field]['tagfield_text'];
+
+  // Do some checks, if necessary.
+    if (isset($form_state['storage'][$field]['tag_list'])) {
+      array_push($form_state['storage'][$field]['tag_list'], $values);
+    }
+    else {
+      $form_state['storage'][$field]['tag_list'] = array($values);
+    }
+  }
+}

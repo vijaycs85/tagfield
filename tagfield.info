@@ -1,0 +1,3 @@
+name = Tagfield
+description = Provides tag style form element
+core = 6.x

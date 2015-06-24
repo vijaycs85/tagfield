@@ -1,0 +1,100 @@
+<?php
+
+
+/**
+ * Implements hook_menu().
+ */
+function tagfield_example_menu() {
+
+  $items['tagfield_example/link'] = array(
+    'title' => 'Form',
+    'description' => '',
+    'page callback' => 'tagfield_example_page',
+    'access arguments' => array('access content'),
+  );
+  $items['tagfield_example/form'] = array(
+    'title' => 'Form',
+    'description' => '',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('tagfield_example_form'),
+    'access arguments' => array('access content'),
+  );
+  $items['tagfield_example/%ctools_js/tagform'] = array(
+    'title' => 'Login',
+    'page callback' => 'tagfield_example_add_tag',
+    'page arguments' => array(1),
+    'access callback' => TRUE,
+    'type' => MENU_CALLBACK,
+  );
+  return $items;
+}
+
+function tagfield_example_page() {
+  // From ctools_ajax_sample module.
+  tagfield_example_include_ctools();
+  $output = '<p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Donec in malesuada lorem. Proin dui felis, finibus sit amet nisi ac, pharetra efficitur mauris. Praesent hendrerit, felis ut sodales mollis, ipsum neque euismod dolor, nec consectetur est purus sit amet enim. Sed semper est et dolor finibus, nec viverra lectus efficitur. Duis faucibus dolor vitae mauris tempor congue. Vestibulum et quam consectetur, pretium eros ut, fringilla ipsum. Fusce in ultrices sapien. Fusce a mi nec nisi mollis placerat. Fusce blandit aliquam malesuada. Nam pharetra, enim quis pretium fringilla, est velit mollis diam, quis consequat dolor tellus et sem. Etiam rhoncus, metus sit amet dictum tempor, lorem orci malesuada nulla, sed mollis lectus metus semper sapien. Suspendisse sit amet pellentesque felis, eu fringilla magna. Maecenas pretium lectus sed velit placerat hendrerit. Nam volutpat erat odio, quis interdum lorem maximus ac. Morbi laoreet id elit in pharetra. Nulla a dolor ac metus maximus pharetra.</p>';
+  $output .= '<p>Donec vitae nibh elit. Nunc venenatis sapien eget mi maximus, vitae sodales ipsum porta. Praesent vitae nulla non mi viverra consequat quis eget massa. Vivamus nec mi eu mauris tempus dictum at sit amet ante. Nunc viverra vulputate neque ac lacinia. Fusce iaculis justo id ornare aliquam. Integer venenatis, enim sit amet dapibus maximus, turpis sapien pellentesque lorem, ut ullamcorper erat nunc hendrerit ex. Proin non gravida ipsum, id tempor dolor. Nam condimentum volutpat justo quis aliquam. Suspendisse tempor risus eu ligula placerat dictum. Mauris euismod ligula at interdum cursus. Donec venenatis elementum lacus, eget interdum justo congue lobortis.</p>';
+  $output .= $links[] = ctools_modal_text_button(t('Add tags'), 'tagfield_example/nojs/tagform', t('Add tags'),  'ctools-modal-ctools-sample-style');
+  return $output;
+}
+
+function tagfield_example_include_ctools() {
+  ctools_include('ajax');
+  ctools_include('modal');
+  ctools_modal_add_js();
+  $sample_style = array(
+    'ctools-sample-style' => array(
+      'modalSize' => array(
+        'type' => 'fixed',
+        'width' => 400,
+        'height' => 150,
+        'addWidth' => 10,
+        'addHeight' => 10,
+      ),
+      'modalOptions' => array(
+        'opacity' => .5,
+        'background-color' => '#000',
+      ),
+      'animation' => 'fadeIn',
+      'modalTheme' => 'CToolsSampleModal',
+      'throbber' => theme('image', ctools_image_path('ajax-loader.gif', 'ctools_ajax_sample'), t('Loading...'), t('Loading')),
+    ),
+  );
+  drupal_add_js($sample_style, 'setting');
+  ctools_add_js('ctools-ajax-sample', 'ctools_ajax_sample');
+  ctools_add_css('ctools-ajax-sample', 'ctools_ajax_sample');
+}
+
+
+function tagfield_example_form(&$form_state) {
+  $form['tags'] = array(
+    '#type' => 'tagfield',
+    '#title' => t('Tags'),
+    '#default' => array(
+      'php',
+      'drupal',
+      'mysql',
+    ),
+    '#description' => 'Tags to add',
+  );
+  return $form;
+}
+
+/**
+ * A modal login callback.
+ */
+function tagfield_example_add_tag($js = NULL) {
+  // Fall back if $js is not set.
+  if (!$js) {
+    return drupal_get_form('tagfield_example_form');
+  }
+
+  ctools_include('modal');
+  ctools_include('ajax');
+  $form_state = array(
+    'title' => t('Add tags'),
+    'ajax' => TRUE,
+  );
+  $output = ctools_modal_form_wrapper('tagfield_example_form', $form_state);
+  ctools_ajax_render($output);
+}

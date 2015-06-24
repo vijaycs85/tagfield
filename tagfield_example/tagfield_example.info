@@ -1,0 +1,4 @@
+name = Tagfield Sxample
+description = Example module to show an example of tagfield element
+core = 6.x
+dependecies[] = ctools_ajax_sample
